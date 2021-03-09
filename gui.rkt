@@ -6,6 +6,7 @@
 
 (define *players* null)
 
+;************************* Welcome Window *************************
 #|Define frame for the welcome window, where the name(s) of the player(s) are requested|#
 (define welcome-window
   (new frame%
@@ -57,6 +58,18 @@
             (start-game (create-players-list (list (send name-input-1 get-value) 
             (send name-input-2 get-value) (send name-input-3 get-value)))))])); creates list of sublists with the name of each player
 
+
+;************************* Main Game Window *************************
+
+#|Define main window that hosts the game dinamic|#
+(define game-window
+  (new frame%
+       [label "BlaCEJack"]
+       [width 800]
+       [height 540]
+       [style (list 'no-resize-border)]
+       ))
+
 #|Deletes null lists from a list
 @param lst : list with sublists that contain the names received from text inputs (may contain empty sublists)
 @return lst : list without empty elements|#
@@ -64,14 +77,6 @@
   (cond ((null? lst) '() )
         ((equal? (car lst) "") (create-players-list (cdr lst)))
         (else (cons (list (car lst)) (create-players-list (cdr lst))))))
-
-#|Define main window that hosts the game dinamic|#
-(define game-window
-  (new frame%
-       [label "BlaCEJack"]
-       [width 400]
-       [height 400]
-       [style (list 'no-resize-border)]))
 
 #|Define label that shows the player who has the current turn|#
 (define turn-mssg 
@@ -93,16 +98,22 @@
 (define (update-players-queue players)
   (append(cdr players) (list (car players))))
 
+#|Sets the name of the player who has the current turn in the turn-mssg label
+@param name : string|#
 (define (set-turn-mssg name) 
   {send turn-mssg set-label (string-join (list (send turn-mssg get-label) name))})
 
+#|Creates the main canvas where the cards will be displayed
+@param frame : frame%
+@param table-bitmap : bitmap%|#
 (define (main-canvas frame table-bitmap)
   (new canvas% 
     [parent frame]
-    [min-height 400]
+    [min-height 365]
     [paint-callback
       (lambda (canvas drawing-context)
-        (send drawing-context draw-bitmap table-bitmap 0 0))])
+        (send drawing-context draw-bitmap table-bitmap 0 0)
+        (send drawing-context draw-bitmap (read-bitmap "resources/test_card.png") 100 100))])
   )
 
 #|Starts game by ...|#
@@ -110,7 +121,7 @@
   (send welcome-window show #f)
   (set-turn-mssg (get-current-turn names))
   (let 
-    ([blackjack-table (read-bitmap "cards/table.jpg")])
+    ([blackjack-table (read-bitmap "resources/table.jpg")])
     (main-canvas game-window blackjack-table))
   (send game-window show #t)
   )
