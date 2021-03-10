@@ -70,3 +70,25 @@
         ((and #t (member? picked-card (car players-cards-list))) #t)
         (else (compare-cards (cdr players-cards-list) picked-card))))
 
+#|Updates the first player info by adding a new card to its card's list
+@param player-info-list : is a list containing the info of the first player
+@param picked-card : is the card that will be given to the player
+@return : the player-info-list updated with the new card|#
+(define (insert-card-into-list player-info-list picked-card)
+    (list (car player-info-list) (cons picked-card (cadr player-info-list)) (cddr player-info-list)))
+
+#|Updates the players information list with the new card added to the first player
+@param players-info-list : is the list that contains the information of all the players
+@param picked-card : the card that will be given to the first player
+@return : the updated players information list|#
+(define (give-card-aux players-info-list picked-card)
+    (cons (insert-card-into-list (car players-info-list) picked-card) (cdr players-info-list)))
+
+#|Checks if a picked card has already been given to one of the players and if it hasn't is given to the first player of the list
+@param players-info-list : is the list that contains the information of all the players
+@param picked-card : the card that will be given to the first player
+@return : the updated players information list|#
+(define (give-card players-info-list picked-card)
+    (cond
+        ((and #t (compare-cards (get-picked-cards players-info-list) picked-card)) (give-card players-info-list (pick-random-card)))
+        (else (give-card-aux players-info-list picked-card))))
