@@ -38,7 +38,7 @@
                       a list of cards that the player has and a boolean that indicates if the player has already
                       stand or not
 @return : the list of cards that the first player of the list has|#
-(define (get-picked-cards-aux players-info-list)
+(define (get-first-player-cards players-info-list)
     (cadar players-info-list))
 
 #|Creates a list of sublists that contains each of the cards that has been given to the players
@@ -49,7 +49,7 @@
 (define (get-picked-cards players-info-list)
     (cond 
         ((null? players-info-list) '())
-        (else (cons (get-picked-cards-aux players-info-list) (get-picked-cards (cdr players-info-list))))))
+        (else (cons (get-first-player-cards players-info-list) (get-picked-cards (cdr players-info-list))))))
 
 #|Indicates if an element belongs to a list
 @param picked-card : is the card that is being compared to the ones in the list
@@ -92,3 +92,11 @@
     (cond
         ((and #t (compare-cards (get-picked-cards players-info-list) picked-card)) (give-card players-info-list (pick-random-card)))
         (else (give-card-aux players-info-list picked-card))))
+
+#|Function called when the player request a new card. If they don't have cards, they will receive 2 cards, otherwise they will be given one
+@param players-info-list : is the list that contains the information of all the players
+@return : the updated players information list||#
+(define (card-request players-info-list)
+    (cond
+        ((= (length (get-first-player-cards players-info-list)) 0) (card-request (give-card players-info-list (pick-random-card))))
+        (else (give-card players-info-list (pick-random-card)))))
