@@ -26,7 +26,7 @@
         ((= random-number 10) "J")
         ((= random-number 11) "Q")
         ((= random-number 12) "K")
-        (else random-number)))
+        (else (~v random-number))))
 
 #|Generates a random card with a value and a figure
 @return : a pair that represents the card, the first element represents the value of the card and the second its figure|#
@@ -100,3 +100,22 @@
     (cond
         ((= (length (get-first-player-cards players-info-list)) 0) (card-request (give-card players-info-list (pick-random-card))))
         (else (give-card players-info-list (pick-random-card)))))
+
+#|Given a card, this function generates a code corresponding to that card
+@param card : is the card that the code is going to be generated for. It has the form: ("value" "figure")
+@return : a string that represents a code corresponding to that specific card. It has the form "valuefigure"|#
+(define (get-card-code card)
+    (string-append (car card) (cadr card)))
+
+#|Fuction that allows to access the last card given to the first player of the list (current player)
+@param players-info-list : is the list that contains the information of all the players
+@return : the last card given to the current player |#
+(define (get-last-card-given players-info-list) 
+    (car (get-first-player-cards players-info-list)))
+
+#|This fuction calls the get-last-card-given and the get-card-code to return the card code of the last card given to the current player
+@param players-info-list : is the list that contains the information of all the players
+@return : the code of the last card given to the current player|#
+(define (get-last-card-code players-info-list)
+    (get-card-code (get-last-card-given players-info-list)))
+
