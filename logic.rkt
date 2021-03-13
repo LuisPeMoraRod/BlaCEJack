@@ -119,3 +119,27 @@
 (define (get-last-card-code players-info-list)
     (get-card-code (get-last-card-given players-info-list)))
 
+#|Given a player list of cards, it sums the value of each one of the cards
+@param player-cards : the list of cards of the current player
+@return : the score of the current player|#
+(define (get-player-score-aux player-cards)
+    (cond 
+        ((null? player-cards) 0)
+        (else
+            (+ (get-card-value (car player-cards)) (get-player-score-aux (cdr player-cards))))))
+
+#|Checks if the value of the card is a letter or a number
+@param card : the card to retrieve the value from
+@return : return the integer 10 if the value is a letter, or the corresponding number if the value is an integer|#
+(define (get-card-value card)
+    (cond
+        ((string->number (car card)) (string->number (car card)))
+        (else 10)))
+
+#|Function call from the GUI to check the score of the current player
+@param players-info-list : is the list that contains the information of all the players
+return : the score of the current player as a string|#
+(define (get-player-score players-info-list)
+    (~v (get-player-score-aux (get-first-player-cards players-info-list))))
+
+
