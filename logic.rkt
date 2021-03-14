@@ -142,4 +142,34 @@ return : the score of the current player as a string|#
 (define (get-player-score players-info-list)
     (~v (get-player-score-aux (get-first-player-cards players-info-list))))
 
+#|Checks if the player doesn't want any more cards
+@param player-cards : the list of cards of the current player
+@return : #t or #f depending on the player stand status|#
+(define (get-stand-status player-info-list)
+    (caddr player-info-list))
 
+#|Changes the stand status of the current player to false
+@param player-cards : the list of cards of the current player
+@return : the player-info-list with the updated status|#
+
+(define (set-stand-to-false player-info-list)
+    (list (car player-info-list) (cadr player-info-list) #f))
+
+#|Checks if the score of the crupier is less than 16
+@param players-info-list : is the list that contains the information of all the players
+return : true if the score is less than 16 or false if it is equal or greater than 17|#
+(define (less-than-16? players-info-list)
+    (cond
+        ((> (string->number (get-player-score players-info-list)) 16) #f)
+        (else #t)))
+
+#|Once all players stand, this function is called for the crupier to pick cards until the score is greater than 16
+@param players-info-list : is the list that contains the information of all the players
+return : the updated players-info-list with all the players on stand including the crupier|#
+(define (cupier-play players-info-list)
+    (cond 
+        ((less-than-16? players-info-list) (cupier-play (card-request players-info-list)))
+        (else (list (set-stand-to-false (car players-info-list)) (cdr players-info-list)))))
+
+
+    
