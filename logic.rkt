@@ -171,5 +171,13 @@ return : the updated players-info-list with all the players on stand including t
         ((less-than-16? players-info-list) (cupier-play (card-request players-info-list)))
         (else (list (set-stand-to-false (car players-info-list)) (cdr players-info-list)))))
 
+#|Checks if all the players have already stand
+@param players-info-list : is the list that contains the information of all the players
+return : true if the stand status of at least one player is true and false if all the player's stand status are set on false|#
+(define (active-players? players-info-list)
+    (cond
+        ((null? players-info-list) #f)
+        ((get-stand-status (car players-info-list)) #t)
+        (else (active-players? (cdr players-info-list)))))
 
     
