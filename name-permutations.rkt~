@@ -1,0 +1,82 @@
+#lang racket
+(require racket/gui)
+
+; This program requires entering your name and gives you all possible permutations.
+; This is a simple example for introducing the racket gui library. Additionally it
+; shows the power of the list functions implemented in racket.
+; Initial version V1.0 (c) Andrés Ramos Jiménez 2017
+
+
+;This is our main window
+(define my-window (new frame%
+                       [label "Permutations of your name"]
+                       [width 400]
+                       [height 300]
+                       [style '(fullscreen-button)]
+                       [alignment '(left top)]))
+
+;This is the textfield where you will enter your name. We declare the textfield before the following
+;gui-elements because it is the first element in the window to be placed on the top
+(define name-input (new text-field%
+                        [parent my-window]
+                        [label "Enter your name here->"]
+                        [min-width 150]
+                        [min-height 30]
+                        [vert-margin 10]
+                        [horiz-margin 10]
+                        [stretchable-width #t]
+                        [stretchable-height #f]))
+
+;With this static message text we tell the user that the length of any name is truncated to 7
+(define msg (new message%
+                 [parent my-window]
+                 [label "The length of the input is truncated to 7 characters!"]
+                 [vert-margin 2]
+                 [horiz-margin 10]))
+
+;This establishes a horizontal pane. It will take the text output for the permutations and a button.
+;It is declared after name-input because it is ordered below it in the main-window. 
+(define panel (new horizontal-pane%
+                   [parent my-window]
+                   [vert-margin 10]
+                   [horiz-margin 10]
+                   [alignment '(left bottom)]
+                   [stretchable-width #t]
+                   [stretchable-height #t]))
+
+;Now we declare the output text element. We do this before we declare the button because this textfield
+;is to be placed first on the left side of the horizontal panel. The buttons comes after it.
+(define text-output (new editor-canvas%
+                         [parent panel]
+                         [label "Permutations"]
+                         [min-width 200]
+                         [min-height 100]
+                         [vert-margin 10]
+                         [horiz-margin 10]
+                         [style '(no-hscroll auto-vscroll)]
+                         [stretchable-width #t]
+                         [stretchable-height #t]))
+
+;Here comes the button for starting the permutation calculations
+(define start-permutation (new button%
+                               [parent panel]
+                               [label "Start"]
+                               [vert-margin 10]
+                               [horiz-margin 10]
+                               [callback (lambda (button event)
+                                           (do-permutation (send name-input get-value) text-output))]))
+
+;This function does the permutations and inserts them in the text output.
+(define (do-permutation text out)
+  (let loop ([lst (permutations (string->list (if (> (string-length text) 8) (substring (string-downcase text) 0 7) (string-downcase text))))]
+             [txt (new text% [auto-wrap #t])])
+    (cond [(empty? lst) (send txt insert "Permutations done")]
+          [else
+           (begin
+             (send txt insert (list->string (car lst)))
+             (send txt insert #\newline)
+             (loop (cdr lst) txt))])
+    (send out set-editor txt)))
+
+;Make window visible
+(send my-window show #t)

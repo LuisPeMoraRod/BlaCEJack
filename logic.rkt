@@ -1,5 +1,13 @@
 #lang racket
+
 (require racket/random)
+
+;export functions
+(provide get-current-player
+         update-players-queue
+         card-request
+         get-first-player-cards
+         get-card-code)
 
 
 #|Generates a random figure for a card
@@ -179,5 +187,21 @@ return : true if the stand status of at least one player is true and false if al
         ((null? players-info-list) #f)
         ((get-stand-status (car players-info-list)) #t)
         (else (active-players? (cdr players-info-list)))))
+
+;-------------------------------------------------------------------------
+;@author: Luis Pedro
+
+
+#|Get the name of the player with the current turn
+@param players : list with the names and list of cards of the players
+@return name of the player with the current turn|#
+(define (get-current-player players)
+    (caar players))
+
+#|Dequeues and enqueues the last player that had the turn
+@param players : list with the names and list of cards of the players
+@return updated players queue|#
+(define (update-players-queue players)
+    (append(cdr players) (list (car players))))
 
     
