@@ -188,6 +188,42 @@ return : true if the stand status of at least one player is true and false if al
         ((get-stand-status (car players-info-list)) #t)
         (else (active-players? (cdr players-info-list)))))
 
+(define (get-final-score-aux players-info-list)
+    (list (string->number (get-player-score players-info-list)) (get-current-player players-info-list)))
+
+(define (get-final-score players-info-list)
+    (cond 
+        ((null? players-info-list) '())
+        (else (cons (get-final-score-aux players-info-list) (get-final-score (cdr players-info-list))))))
+
+(define (delete-final-element element-list)
+    (cond
+        ((= (length element-list) 1) '())
+        (else (cons (car element-list) (delete-final-element (cdr element-list))))))
+
+(define (get-final-element element-list)
+    (cond
+        ((= (length element-list) 1) (car element-list))
+        (else (get-final-element (cdr element-list)))))
+
+(define (check-and-switch players-scores)
+    (cond
+        ((= (length players-scores) 1) players-scores)
+        ((<= (caar players-scores) (caadr players-scores)) (cons (car players-scores) (check-and-switch (cdr players-scores))))
+        (else (cons (cadr players-scores) (check-and-switch (cons (car players-scores) (cddr players-scores)))))))
+
+(define (bubble-sort-scores-aux players-scores)
+    (cond 
+        ((null? players-scores) '())
+        (else 
+            (cons (get-final-element (check-and-switch players-scores)) (bubble-sort-scores-aux (delete-final-element (check-and-switch players-scores)))))))
+
+(define (bubble-sort-scores players-scores)
+    (bubble-sort-scores-aux players-scores))
+
+(define (get-rank players-info-list)
+    (bubble-sort-scores (get-final-score players-info-list)))
+
 ;-------------------------------------------------------------------------
 ;@author: Luis Pedro
 
