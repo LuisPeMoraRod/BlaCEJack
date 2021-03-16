@@ -177,19 +177,13 @@ return : the updated players-info-list with all the players on stand including t
 (define (cupier-play players-info-list)
     (cond 
         ((less-than-16? players-info-list) (cupier-play (card-request players-info-list)))
-        (else (list (set-stand-to-false (car players-info-list)) (cdr players-info-list)))))
+        (else players-info-list)))
 
-#|Checks if all the players have already stand
-@param players-info-list : is the list that contains the information of all the players
-return : true if the stand status of at least one player is true and false if all the player's stand status are set on false|#
-(define (active-players? players-info-list)
-    (cond
-        ((null? players-info-list) #f)
-        ((get-stand-status (car players-info-list)) #t)
-        (else (active-players? (cdr players-info-list)))))
+(define (count-cards players-info-list)
+    (length (get-first-player-cards players-info-list)))
 
 (define (get-final-score-aux players-info-list)
-    (list (string->number (get-player-score players-info-list)) (get-current-player players-info-list)))
+    (list (string->number (get-player-score players-info-list)) (get-current-player players-info-list) (count-cards players-info-list)))
 
 (define (get-final-score players-info-list)
     (cond 
@@ -221,8 +215,9 @@ return : true if the stand status of at least one player is true and false if al
 (define (bubble-sort-scores players-scores)
     (bubble-sort-scores-aux players-scores))
 
-(define (get-rank players-info-list)
+(define (get-partial-rank players-info-list)
     (bubble-sort-scores (get-final-score players-info-list)))
+
 
 ;-------------------------------------------------------------------------
 ;@author: Luis Pedro
