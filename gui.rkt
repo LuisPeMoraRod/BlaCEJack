@@ -400,7 +400,6 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                 (send my-dc draw-bitmap (read-bitmap card-png) (- *x-croupier* 20) *y-croupier*) ;draw card on top of the back-card image
                 (croupier-turn-aux id parent-frame my-dc)
                 (send parent-frame refresh)
-                (sleep 5)
           )
     )
 
