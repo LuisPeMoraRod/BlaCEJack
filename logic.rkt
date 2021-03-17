@@ -10,7 +10,8 @@
          get-card-code
          get-player-score
          get-last-card-given
-         has-A?)
+         has-A?
+         busted?)
 
 
 #|Generates a random figure for a card
@@ -145,7 +146,7 @@
 (define (get-card-value card)
     (cond
         ((string->number (car card)) (string->number (car card)))
-        ((equal? (car card) "A") 11) ;Ace is initially set as 11
+        ((equal? (car card) "A") 0) ;Ace is initially set as 0
         (else 10))) ;J, Q or K card has value of 10
 
 #|Function call from the GUI to check the score of the current player
@@ -269,6 +270,12 @@ return : the updated players-info-list with all the players on stand including t
     (cond ((null? cards) #f)
           ((equal? (caar cards) "A") #t)
           (else (has-A-aux (cdr cards)))))
+
+#|Checks if the first player (current turn) has a score greater than 21
+@param players-info-list
+@return boolean|#
+(define (busted? players-info-list)
+    (> (string->number (get-player-score players-info-list)) 21))
 
 ;(set-A-card '(("luis" (("A" "S") ("3" "H")) ) ("moni" (("9" "S")))) "11" '("A" "S"))
 ;(has-A? '(("luis" (("A" "S") ("3" "H")) ) ("moni" (("9" "S")))))

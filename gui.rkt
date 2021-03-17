@@ -203,8 +203,6 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                         (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players))))
                   (else
                       (cond ((> (string->number (get-player-score players)) 21) 
-                                (set! *players* (update-players-queue *players*))
-                                (set-turn-mssg (get-current-player *players*))
                                 (append (list "\n\t" (get-current-player players) " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
                             (else (append (list "\n\t" (get-current-player players) " : " (get-player-score players )) (update-scores-mssg-aux (cdr players)))))
                       ) 
@@ -344,12 +342,17 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                     (draw-card id (get-last-card-given *players*) my-dc) ;draw first card in list
                 )
           )
-        (cond ((equal? (car (get-last-card-given *players*)) "A")
+        (cond ((equal? (car (get-last-card-given *players*)) "A") ; checks if new card is an Ace
                     (for ([i *number-buttons*]
                           [j *playing-buttons*]) 
                             (send i enable #t)
                             (send j enable #f)))
-              (else (update-scores-mssg) ))
+              (else 
+                  (cond ((busted? *players*)
+                        (next-player)))
+                    ))
+        (set-turn-mssg (get-current-player *players*))
+        (update-scores-mssg)
         (send parent-frame refresh))]))
 
 #|Creates button to stand. The player wont receive more cards.
@@ -365,9 +368,9 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
       [enabled #f]
       [callback
       (lambda (button event)
-        ;(send my-dc clear)
-        ;(send my-dc draw-bitmap (read-bitmap "plainDoge2.jpg") 100 0)
-        ;(send button enable #f)
+        (next-player)
+        (update-scores-mssg)
+        (set-turn-mssg (get-current-player *players*))
         (send parent-frame refresh))]))
 
 #|Define info label |#
@@ -375,6 +378,15 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
   (new message% [label "If you got an Ace, choose the value of the card:"]
           [parent horiz-panel]
           [horiz-margin 5]))
+
+#|Gives turn to next player. Checks if these new play has Aces to replace|#
+(define (next-player)
+    (set! *players* (update-players-queue *players*))
+    (cond ((has-A? *players*) ; enable number buttons if player in turn has any Ace
+        (for ([i *number-buttons*]
+              [j *playing-buttons*]) 
+              (send i enable #t)
+              (send j enable #f)))))
 
 #|Button that sets Ace card to 11|#
 (define (button-11 horiz-panel parent-frame my-dc)
@@ -386,12 +398,17 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
         (lambda (button event)
           (let ([card (get-last-card-given *players*)]) ; get last card given
               (set! *players* (set-A-card *players* "11" card)))
-          (update-scores-mssg)
-          (cond ((not (has-A? *players*)) 
+          (cond ((not (has-A? *players*)) ; in case there where 2 aces
               (for ([i *number-buttons*]
                     [j *playing-buttons*]) 
                     (send i enable #f)
                     (send j enable #t))))
+
+          (cond ((busted? *players*) 
+                  (next-player)))
+          
+          (update-scores-mssg)
+          (set-turn-mssg (get-current-player *players*))
           (send parent-frame refresh))]))
 
 #|Button that sets Ace card to 1|#
@@ -402,14 +419,19 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
         [enabled #f]
         [callback
         (lambda (button event)
-          (let ([card (get-last-card-given *players*)])
+          (let ([card (get-last-card-given *players*)]) ; get last card given
               (set! *players* (set-A-card *players* "1" card)))
-          (update-scores-mssg)
-          (cond ((not (has-A? *players*)) 
+          (cond ((not (has-A? *players*))  ; in case there where 2 aces
               (for ([i *number-buttons*]
                     [j *playing-buttons*]) 
                     (send i enable #f)
                     (send j enable #t))))
+
+          (cond ((busted? *players*) 
+                  (next-player)))
+          
+          (update-scores-mssg)
+          (set-turn-mssg (get-current-player *players*))
           (send parent-frame refresh))]))
 
 #|Changes the Ace card (has to be the first card of the list) of the first player in the list to 1 or 11, depending on the value parameter
