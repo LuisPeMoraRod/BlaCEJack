@@ -181,19 +181,13 @@ return : the updated players-info-list with all the players on stand including t
 (define (cupier-play players-info-list)
     (cond 
         ((less-than-16? players-info-list) (cupier-play (card-request players-info-list)))
-        (else (list (set-stand-to-false (car players-info-list)) (cdr players-info-list)))))
+        (else players-info-list)))
 
-#|Checks if all the players have already stand
-@param players-info-list : is the list that contains the information of all the players
-return : true if the stand status of at least one player is true and false if all the player's stand status are set on false|#
-(define (active-players? players-info-list)
-    (cond
-        ((null? players-info-list) #f)
-        ((get-stand-status (car players-info-list)) #t)
-        (else (active-players? (cdr players-info-list)))))
+(define (count-cards players-info-list)
+    (length (get-first-player-cards players-info-list)))
 
 (define (get-final-score-aux players-info-list)
-    (list (string->number (get-player-score players-info-list)) (get-current-player players-info-list)))
+    (list (string->number (get-player-score players-info-list)) (get-current-player players-info-list) (count-cards players-info-list)))
 
 (define (get-final-score players-info-list)
     (cond 
@@ -216,18 +210,40 @@ return : true if the stand status of at least one player is true and false if al
         ((<= (caar players-scores) (caadr players-scores)) (cons (car players-scores) (check-and-switch (cdr players-scores))))
         (else (cons (cadr players-scores) (check-and-switch (cons (car players-scores) (cddr players-scores)))))))
 
-(define (bubble-sort-scores-aux players-scores)
+(define (bubble-sort-scores players-scores)
     (cond 
         ((null? players-scores) '())
         (else 
-            (cons (get-final-element (check-and-switch players-scores)) (bubble-sort-scores-aux (delete-final-element (check-and-switch players-scores)))))))
+            (cons (get-final-element (check-and-switch players-scores)) (bubble-sort-scores (delete-final-element (check-and-switch players-scores)))))))
 
-(define (bubble-sort-scores players-scores)
-    (bubble-sort-scores-aux players-scores))
+(define (greater-than-21 players-scores)
+    (cond
+        ((<= (caar players-scores) 21) '())
+        (else (reverse (cons (car players-scores) (greater-than-21 (cdr players-scores)))))))
+
+(define (less-than-21 players-scores)
+    (cond
+        ((>= (caar players-scores) 21) (less-than-21 (cdr players-scores))) 
+        (else players-scores)))
+
+(define (get-card-count player-score)
+    (caddr player-score))
+
+(define (equal-to-21 players-scores reference)
+    (cond
+        ((= (caar players-scores) 21) 
+            (cond
+                ((null? reference) (equal-to-21 (cdr players-scores) (list (car players-scores))))
+                ((< (get-card-count (car reference)) (get-card-count (car players-scores))) (equal-to-21 (cdr players-scores) (append reference (list (car players-scores)))))
+                (else (equal-to-21 (cdr players-scores) (append (list (car players-scores)) reference)))))
+        ((> (caar players-scores) 21) (equal-to-21 (cdr players-scores) reference))
+        (else reference)))
+
+(define (get-rank-aux players-scores)
+    (append (equal-to-21 players-scores '()) (less-than-21 players-scores) (greater-than-21 players-scores)))
 
 (define (get-rank players-info-list)
-    (bubble-sort-scores (get-final-score players-info-list)))
-
+    (get-rank-aux (bubble-sort-scores (get-final-score players-info-list))))
 ;-------------------------------------------------------------------------
 ;@author: Luis Pedro
 
