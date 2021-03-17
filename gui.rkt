@@ -191,8 +191,11 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 
 #|Sets the name of the player who has the current turn in the turn-mssg label
 @param name : string|#
-(define (set-turn-mssg name) 
-  {send turn-mssg set-label (string-join (list "It's your turn: " name))})
+(define (set-turn-mssg name)
+  (cond ((equal? name "*croupier*")
+              {send turn-mssg set-label "It's your turn: Croupier"})
+        (else {send turn-mssg set-label (string-join (list "It's your turn: " name))}))
+  )
 
 #|Update scores label|#
 (define (update-scores-mssg)
@@ -201,7 +204,10 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
   (cond ((null? players) '())
         (else
             (cond ((equal? (get-current-player players) "*croupier*")
-                        (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players))))
+                        (cond((> (string->number (get-player-score players)) 21) 
+                              (append (list "\n\t" "Croupier" " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
+                              (else (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players)))))
+                        )
                   (else
                       (cond ((> (string->number (get-player-score players)) 21) 
                                 (append (list "\n\t" (get-current-player players) " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
