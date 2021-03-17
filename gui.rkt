@@ -7,6 +7,7 @@
 (require "logic.rkt")
 
 (define *players* null) ;global variable that is going to register the cards owned by each player
+
  ;global variables for the position in screen of the cards of each player
 (define *x-croupier* 360)
 (define *y-croupier* 30)
@@ -17,10 +18,14 @@
 (define *x-pos2* null)
 (define *y-pos2* null)
 
+;hashmap table to link every player's name to an id
 (define *players-id* (make-hash))
 
 ;list containing the position in screen for the next card to be added
 (define *cards-pos* null)
+
+(define *number-buttons* null)
+(define *playing-buttons* null)
 
 ;hash table to link a code that represents every card to the path of that card's image (png)
 (define cards-hash-table
@@ -137,24 +142,42 @@
 
 
 ;************************* Main Game Window *************************
-
 #|Define main window that hosts the game dinamic|#
 (define game-window
   (new frame%
        [label "BlaCEJack"]
        [width 800]
-       [height 540]
+       ;[height 580]
        [style (list 'no-resize-border)]
        [alignment (list 'left 'center)]
+       [stretchable-height #f]
        ))
+ #|Define horizontal panel to locate info labels|#      
+(define panel (new horizontal-pane%
+                   [parent game-window]
+                   [vert-margin 10]
+                   [horiz-margin 10]
+                   [alignment (list 'right 'center)]
+                   [stretchable-width #t]
+                   [stretchable-height #t]))
 
 #|Define label that shows the player who has the current turn|#
 (define turn-mssg 
 (new message%
-       [parent game-window]
+       [parent panel]
        [label "Press 'Begin' button to start the game..."]
        [vert-margin 2]
-       [horiz-margin 10]))
+       [horiz-margin 10]
+       ))
+
+
+#|Define label that shows the player who has the current turn|#
+(define scores-mssg 
+(new message%
+       [parent panel]
+       [label "Scores: \n\n\n\n"]
+       [vert-margin 2]
+       [horiz-margin 200]))
 
 #|Deletes null lists from a list
 @param lst : list with sublists that contain the names received from text inputs (may contain empty sublists)
@@ -169,6 +192,25 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 @param name : string|#
 (define (set-turn-mssg name) 
   {send turn-mssg set-label (string-join (list "It's your turn: " name))})
+
+#|Update scores label|#
+(define (update-scores-mssg)
+  (send scores-mssg set-label (string-join (append (list "Scores:") (update-scores-mssg-aux *players*)))))
+(define (update-scores-mssg-aux players)
+  (cond ((null? players) '())
+        (else
+            (cond ((equal? (get-current-player players) "*croupier*")
+                        (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players))))
+                  (else
+                      (cond ((> (string->number (get-player-score players)) 21) 
+                                (set! *players* (update-players-queue *players*))
+                                (set-turn-mssg (get-current-player *players*))
+                                (append (list "\n\t" (get-current-player players) " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
+                            (else (append (list "\n\t" (get-current-player players) " : " (get-player-score players )) (update-scores-mssg-aux (cdr players)))))
+                      ) 
+            ))))
+
+
 
 #|Creates the main canvas where the cards will be displayed
 @param frame : frame%
@@ -189,10 +231,10 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 
 #|Creates horizontal panel where the "Stand" and "New Card" buttons will be placed
 @param parent-frame|#
-(define (create-horiz-panel parent-frame)
+(define (create-horiz-panel parent-frame alignment-list)
   (new horizontal-panel% 
       [parent parent-frame]
-      [alignment (list 'right 'center)]))
+      [alignment alignment-list]))
 
 #|Creates button to begin game. It disables after being clicked.
 @param horiz-panel : horizontal-panel%
@@ -209,8 +251,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
       (lambda (button event)
         (set-positions amount-players)
         (set-ids)
-        ;(send my-dc clear)
-        ;(set-turn-mssg (get-current-turn *players*))
+        (send my-dc set-text-foreground "white")
         (for ([i (in-range (length *players*))])
               (set! *players* (card-request *players*)) ;gives two cards to the first player in queue
               (let ([player (get-current-player *players*)])
@@ -219,16 +260,20 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                             (draw-card id (cadr cards) my-dc) ;draw first card
                             (cond ((equal? id 3) 
                                     (draw-card id '("X" "X") my-dc)) ; draw back of the card for croupier
-                                  (else (draw-card id (car cards) my-dc))) ;draw second card
+                                  (else (draw-card id (get-last-card-given *players*) my-dc))) ;draw second card
+                            (draw-name id player my-dc)
                             ) 
                     )
               (set! *players* (update-players-queue *players*))
               )
         (set-turn-mssg (get-current-player *players*))
-
-        ;(send my-dc draw-bitmap (read-bitmap "resources/cards/cardBack_red4.png") *x-croupier* *y-croupier*)
-        ;(send my-dc draw-bitmap (read-bitmap "resources/cards/cardClubs10.png") (+ *x-croupier* 20) *y-croupier*)
+        (update-scores-mssg)
         (send button enable #f)
+        (cond ((has-A? *players*) ; enable number buttons if player in turn has any Ace
+              (for ([i *number-buttons*])
+                    (send i enable #t)))
+              (else (for ([i *playing-buttons*])
+                    (send i enable #t))))
         (send parent-frame refresh))]))
 
 #|Sets the initial values of the global variables that contain the x coordinate of the position in screen of the cards images.
@@ -244,6 +289,10 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
       (hash-set! *players-id* (car (list-ref *players* i)) i))
   (hash-set! *players-id* "*croupier*" 3)) ; croupier will always have id = 3
 
+#|Inserts card image in canvas
+@param id : identifier for the player to know where to insert the image
+@param card : string key to search the path of the image in the hashmap
+@param my-dc : bitmap-dc%|#
 (define (draw-card id card my-dc)
   (let ([card-png (~a (hash-ref cards-hash-table (get-card-code card)))])
       (cond ((equal? id 0)
@@ -259,6 +308,22 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                 (send my-dc draw-bitmap (read-bitmap card-png) *x-croupier* *y-croupier*)
                 (set! *x-croupier* (+ *x-croupier* 20))))))
 
+#|Draws text in canvas: the name of every player next to the group of cards that they own
+@param id : int
+@param name : string
+@param my-cd : bitmap-dc%|#
+(define (draw-name id name my-dc)
+  (cond ((equal? id 0)
+                (send my-dc draw-text name (- *x-pos0* 30) (+ *y-pos0* 100))
+                )
+            ((equal? id 1)
+                (send my-dc draw-text name (- *x-pos1* 30) (+ *y-pos1* 100)))
+            ((equal? id 2)
+                (send my-dc draw-text name (- *x-pos2* 30) (+ *y-pos2* 100)))
+            ((equal? id 3)
+                (send my-dc draw-text "Croupier" (- *x-croupier* 120) (+ *y-croupier* 30))))
+  )
+
 #|Creates button for new card. Updates images on canvas. The position of the cards depend on the amount of players.
 @param horiz-panel : horizontal-panel%
 @param parent-frame : frame%
@@ -270,11 +335,21 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
       [parent horiz-panel]
       [vert-margin 5]
       [horiz-margin 5]
+      [enabled #f]
       [callback
       (lambda (button event)
-        ;(send my-dc clear)
-        ;(send my-dc draw-bitmap (read-bitmap "plainDoge2.jpg") 100 0)
-
+        (set! *players* (card-request *players*)) ;update players list
+        (let ([player (get-current-player *players*)])
+              (let ([id (hash-ref *players-id* player)])
+                    (draw-card id (get-last-card-given *players*) my-dc) ;draw first card in list
+                )
+          )
+        (cond ((equal? (car (get-last-card-given *players*)) "A")
+                    (for ([i *number-buttons*]
+                          [j *playing-buttons*]) 
+                            (send i enable #t)
+                            (send j enable #f)))
+              (else (update-scores-mssg) ))
         (send parent-frame refresh))]))
 
 #|Creates button to stand. The player wont receive more cards.
@@ -287,12 +362,71 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
       [parent horiz-panel]
       [vert-margin 5]
       [horiz-margin 5]
+      [enabled #f]
       [callback
       (lambda (button event)
         ;(send my-dc clear)
         ;(send my-dc draw-bitmap (read-bitmap "plainDoge2.jpg") 100 0)
         ;(send button enable #f)
         (send parent-frame refresh))]))
+
+#|Define info label |#
+(define (ace-mssg horiz-panel)
+  (new message% [label "If you got an Ace, choose the value of the card:"]
+          [parent horiz-panel]
+          [horiz-margin 5]))
+
+#|Button that sets Ace card to 11|#
+(define (button-11 horiz-panel parent-frame my-dc)
+  (new button% [label "11"]
+        [parent horiz-panel]
+        [horiz-margin 5]
+        [enabled #f]
+        [callback
+        (lambda (button event)
+          (let ([card (get-last-card-given *players*)]) ; get last card given
+              (set! *players* (set-A-card *players* "11" card)))
+          (update-scores-mssg)
+          (cond ((not (has-A? *players*)) 
+              (for ([i *number-buttons*]
+                    [j *playing-buttons*]) 
+                    (send i enable #f)
+                    (send j enable #t))))
+          (send parent-frame refresh))]))
+
+#|Button that sets Ace card to 1|#
+(define (button-1 horiz-panel parent-frame my-dc)
+  (new button% [label "1"]
+        [parent horiz-panel]
+        [horiz-margin 5]
+        [enabled #f]
+        [callback
+        (lambda (button event)
+          (let ([card (get-last-card-given *players*)])
+              (set! *players* (set-A-card *players* "1" card)))
+          (update-scores-mssg)
+          (cond ((not (has-A? *players*)) 
+              (for ([i *number-buttons*]
+                    [j *playing-buttons*]) 
+                    (send i enable #f)
+                    (send j enable #t))))
+          (send parent-frame refresh))]))
+
+#|Changes the Ace card (has to be the first card of the list) of the first player in the list to 1 or 11, depending on the value parameter
+@param new-value : integer (1 or 11)
+@param players-info-list : list
+@return updated list|#
+(define (set-A-card players-info-list new-value card)
+    (let* ([cards (get-first-player-cards players-info-list)]
+           [first-card (caar cards)]
+           [second-card (caadr cards)]
+           [name (get-current-player players-info-list)])
+                (cond ((equal? second-card "A") 
+                          (cons (list name (list-set cards 1 (list new-value (cadr card)))) (cdr players-info-list))) ;update second card with new value
+                      (else
+                          (cons (list name (list-set cards 0 (list new-value (cadr card)))) (cdr players-info-list)) ;update first card with new value
+                        )
+                          )))
 
 #|Adds croupier to queue
 @param names : list|#
@@ -310,18 +444,28 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 (define (start-game names)
   (send welcome-window show #f)
   (set! *players* (add-croupier names)) ;sets list with sublists of the names of each player and the croupier
-
+  (update-scores-mssg)
   (let 
     ([blackjack-table (read-bitmap "resources/table.jpg")]
     [back-card (read-bitmap "resources/cards/cardBack_red4.png")])
     (main-canvas game-window blackjack-table back-card)
-    (let 
-      ([horiz-panel (create-horiz-panel game-window)])
+    (let* 
+      ([horiz-panel (create-horiz-panel game-window (list 'center 'center))]
+        [horiz-panel1 (create-horiz-panel horiz-panel (list 'left 'center))]
+        [horiz-panel2 (create-horiz-panel horiz-panel (list 'right 'center))])
       (let ([drawing-context (new bitmap-dc% [bitmap blackjack-table])])
-        (begin-button horiz-panel game-window drawing-context (amount-players *players*))
-        (new-card-button horiz-panel game-window drawing-context (amount-players *players*))
-        (stand-button horiz-panel game-window drawing-context)
-      )))
+        (let* ([ace-messg (ace-mssg horiz-panel1) ] ; setting buttons
+              [one-bttn (button-1 horiz-panel1 game-window drawing-context)]
+              [eleven-bttn (button-11 horiz-panel1 game-window drawing-context)]
+              [card-bttn (new-card-button horiz-panel2 game-window drawing-context (amount-players *players*))]
+              [stand-bttn (stand-button horiz-panel2 game-window drawing-context)])
+              (set! *number-buttons* (list one-bttn eleven-bttn)) ;list of buttons for posterior enabling/disabling
+              (set! *playing-buttons* (list card-bttn stand-bttn)) ;list of buttons for posterior enabling/disabling
+          (begin-button horiz-panel2 game-window drawing-context (amount-players *players*))
+          ) 
+        )
+      )
+    )
   (send game-window show #t)
   )
 

@@ -7,7 +7,10 @@
          update-players-queue
          card-request
          get-first-player-cards
-         get-card-code)
+         get-card-code
+         get-player-score
+         get-last-card-given
+         has-A?)
 
 
 #|Generates a random figure for a card
@@ -142,7 +145,8 @@
 (define (get-card-value card)
     (cond
         ((string->number (car card)) (string->number (car card)))
-        (else 10)))
+        ((equal? (car card) "A") 11) ;Ace is initially set as 11
+        (else 10))) ;J, Q or K card has value of 10
 
 #|Function call from the GUI to check the score of the current player
 @param players-info-list : is the list that contains the information of all the players
@@ -240,4 +244,15 @@ return : true if the stand status of at least one player is true and false if al
 (define (update-players-queue players)
     (append(cdr players) (list (car players))))
 
-    
+#|Checks if the first player has any Ace within his cards
+@param players-info-list
+@return boolean|#
+(define (has-A? players-info-list)
+    (has-A-aux (get-first-player-cards players-info-list)))
+(define (has-A-aux cards)
+    (cond ((null? cards) #f)
+          ((equal? (caar cards) "A") #t)
+          (else (has-A-aux (cdr cards)))))
+
+;(set-A-card '(("luis" (("A" "S") ("3" "H")) ) ("moni" (("9" "S")))) "11" '("A" "S"))
+;(has-A? '(("luis" (("A" "S") ("3" "H")) ) ("moni" (("9" "S")))))
