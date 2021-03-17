@@ -11,7 +11,8 @@
          get-player-score
          get-last-card-given
          has-A?
-         busted?)
+         busted?
+         cupier-play)
 
 
 #|Generates a random figure for a card
@@ -146,8 +147,8 @@
 (define (get-card-value card)
     (cond
         ((string->number (car card)) (string->number (car card)))
-        ((equal? (car card) "A") 0) ;Ace is initially set as 0
-        (else 10))) ;J, Q or K card has value of 10
+        ((equal? (car card) "A") 0) ;Ace is initially set as 0 for ot
+        (else 10))) ;J, Q or K card has value of 10 
 
 #|Function call from the GUI to check the score of the current player
 @param players-info-list : is the list that contains the information of all the players

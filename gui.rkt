@@ -142,6 +142,7 @@
 
 
 ;************************* Main Game Window *************************
+
 #|Define main window that hosts the game dinamic|#
 (define game-window
   (new frame%
@@ -152,6 +153,7 @@
        [alignment (list 'left 'center)]
        [stretchable-height #f]
        ))
+
  #|Define horizontal panel to locate info labels|#      
 (define panel (new horizontal-pane%
                    [parent game-window]
@@ -169,7 +171,6 @@
        [vert-margin 2]
        [horiz-margin 10]
        ))
-
 
 #|Define label that shows the player who has the current turn|#
 (define scores-mssg 
@@ -208,8 +209,6 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                       ) 
             ))))
 
-
-
 #|Creates the main canvas where the cards will be displayed
 @param frame : frame%
 @param table-bitmap : bitmap%|#
@@ -224,8 +223,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
         ;draw representation of deck of cards in canvas
         (send drawing-context draw-bitmap card-bitmap 100 50)
         (send drawing-context draw-bitmap card-bitmap 104 54)
-        (send drawing-context draw-bitmap card-bitmap 108 58))])
-  )
+        (send drawing-context draw-bitmap card-bitmap 108 58))]))
 
 #|Creates horizontal panel where the "Stand" and "New Card" buttons will be placed
 @param parent-frame|#
@@ -319,8 +317,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
             ((equal? id 2)
                 (send my-dc draw-text name (- *x-pos2* 30) (+ *y-pos2* 100)))
             ((equal? id 3)
-                (send my-dc draw-text "Croupier" (- *x-croupier* 120) (+ *y-croupier* 30))))
-  )
+                (send my-dc draw-text "Croupier" (- *x-croupier* 120) (+ *y-croupier* 30)))))
 
 #|Creates button for new card. Updates images on canvas. The position of the cards depend on the amount of players.
 @param horiz-panel : horizontal-panel%
@@ -349,9 +346,8 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                             (send j enable #f)))
               (else 
                   (cond ((busted? *players*)
-                        (next-player)))
+                        (next-player parent-frame my-dc)))
                     ))
-        (set-turn-mssg (get-current-player *players*))
         (update-scores-mssg)
         (send parent-frame refresh))]))
 
@@ -368,9 +364,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
       [enabled #f]
       [callback
       (lambda (button event)
-        (next-player)
-        (update-scores-mssg)
-        (set-turn-mssg (get-current-player *players*))
+        (next-player parent-frame my-dc)
         (send parent-frame refresh))]))
 
 #|Define info label |#
@@ -380,13 +374,47 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
           [horiz-margin 5]))
 
 #|Gives turn to next player. Checks if these new play has Aces to replace|#
-(define (next-player)
+(define (next-player parent-frame my-dc)
     (set! *players* (update-players-queue *players*))
+    (set-turn-mssg (get-current-player *players*))
+    (update-scores-mssg)
+    (send parent-frame refresh)
+
+    (cond((equal? (get-current-player *players*) "*croupier*") 
+              (croupier-turn parent-frame my-dc)))
     (cond ((has-A? *players*) ; enable number buttons if player in turn has any Ace
         (for ([i *number-buttons*]
               [j *playing-buttons*]) 
               (send i enable #t)
               (send j enable #f)))))
+
+(define (croupier-turn parent-frame my-dc)
+    (for ([i *number-buttons*]
+          [j *playing-buttons*]) 
+          (send i enable #f)
+          (send j enable #f))
+    (let* ([last-card (get-last-card-given *players*)]
+            [player (get-current-player *players*)]
+            [id (hash-ref *players-id* player)]
+            [card-png (~a (hash-ref cards-hash-table (get-card-code last-card)))])
+                (send my-dc draw-bitmap (read-bitmap card-png) (- *x-croupier* 20) *y-croupier*) ;draw card on top of the back-card image
+                (croupier-turn-aux id parent-frame my-dc)
+                (send parent-frame refresh)
+                (sleep 5)
+          )
+    )
+
+(define (croupier-turn-aux id parent-frame my-dc)
+    (update-scores-mssg)
+    (let ([score (get-player-score *players*)])
+        (cond ((> (string->number score) 16) ;if croupier's score is higher than 16
+              #f) ;ends game
+              (else (set! *players* (cupier-play *players*))
+                    (draw-card id (get-last-card-given *players*) my-dc)
+                    (croupier-turn-aux id parent-frame my-dc)
+                    (send parent-frame refresh)
+                    (sleep 1)))) ;croupier asks for another card
+    )
 
 #|Button that sets Ace card to 11|#
 (define (button-11 horiz-panel parent-frame my-dc)
@@ -405,10 +433,8 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                     (send j enable #t))))
 
           (cond ((busted? *players*) 
-                  (next-player)))
-          
+                  (next-player parent-frame my-dc)))
           (update-scores-mssg)
-          (set-turn-mssg (get-current-player *players*))
           (send parent-frame refresh))]))
 
 #|Button that sets Ace card to 1|#
@@ -428,10 +454,8 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                     (send j enable #t))))
 
           (cond ((busted? *players*) 
-                  (next-player)))
-          
+                  (next-player parent-frame my-dc)))
           (update-scores-mssg)
-          (set-turn-mssg (get-current-player *players*))
           (send parent-frame refresh))]))
 
 #|Changes the Ace card (has to be the first card of the list) of the first player in the list to 1 or 11, depending on the value parameter
@@ -492,4 +516,3 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
   )
 
 (send welcome-window show #t)
-;(card-request (card-request (create-players-list '("1" "2"))))
