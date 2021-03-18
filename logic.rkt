@@ -12,7 +12,7 @@
          get-last-card-given
          has-A?
          busted?
-         cupier-play)
+         card-request-croupier)
 
 
 #|Generates a random figure for a card
@@ -111,8 +111,37 @@
 @return : the updated players information list||#
 (define (card-request players-info-list)
     (cond
-        ((= (length (get-first-player-cards players-info-list)) 0) (card-request (give-card players-info-list (pick-random-card))))
-        (else (give-card players-info-list (pick-random-card)))))
+        ((= (length (get-first-player-cards players-info-list)) 0) 
+            (cond ((equal? (get-current-player players-info-list) "*croupier*") 
+                        (card-request (card-request-croupier players-info-list)))
+                    (else (card-request (give-card players-info-list (pick-random-card))))))
+        (else 
+            (cond ((equal? (get-current-player players-info-list) "*croupier*")
+                        (card-request-croupier players-info-list))
+                   (else (give-card players-info-list (pick-random-card)))))))
+
+#|Function called when the croupier requests a new card. Works very similar to card-request, but in this function, a value of 11 or 1 is automatically 
+assigned to an Ace card. The card should be 11 if the count won't be greater than 21, otherwise, the card value would be 1.
+@param players-info-list 
+@return updated players-info-list|#
+(define (card-request-croupier players-info-list)
+    (card-request-croupier-aux (give-card players-info-list (pick-random-card)))
+    )
+(define (card-request-croupier-aux players-info-list)
+    (cond ((equal? (car (get-last-card-given players-info-list)) "A") ; checks if new card is an Ace
+                (cond ((< (string->number (get-player-score players-info-list)) 10) (last-card-to-11 players-info-list))
+                        (else (last-card-to-1 players-info-list))))
+          (else players-info-list)))
+
+#|Changes the value of the last card given to the player in turn to a 11|#
+(define (last-card-to-11 players)
+    (cons (list (get-current-player players) (cons (list "11" (cadr (get-last-card-given players))) ;recreates list by changing the first card of the first player
+    (cdr (get-first-player-cards players)))) (cdr players)))
+
+#|Changes the value of the last card given to the player in turn to a 1|#
+(define (last-card-to-1 players)
+    (cons (list (get-current-player players) (cons (list "1" (cadr (get-last-card-given players))) ;recreates list by changing the first card of the first player
+    (cdr (get-first-player-cards players)))) (cdr players)))
 
 #|Given a card, this function generates a code corresponding to that card
 @param card : is the card that the code is going to be generated for. It has the form: ("value" "figure")
@@ -280,3 +309,6 @@ return : the updated players-info-list with all the players on stand including t
 
 ;(set-A-card '(("luis" (("A" "S") ("3" "H")) ) ("moni" (("9" "S")))) "11" '("A" "S"))
 ;(has-A? '(("luis" (("A" "S") ("3" "H")) ) ("moni" (("9" "S")))))
+;(cupier-play '(("Moni" () #t) ("Luis" () #f) ("Jei" () #t)))
+;(last-card-to-11 '(("Moni" (("A" "C")("7" "D") ("5" "S"))) ("Luis" (("8" "H")))))
+;(card-request-croupier '(("*croupier*" (("4" "H") ("Q" "C") ("5" "H")) (((#t)))) ("Zoe" (("9" "C") ("11" "C") ("4" "C")) ()) ("Sol" (("6" "S") ("J" "H") ("2" "S")) (((#t)))) ("Pez" (("K" "S") ("2" "D") ("J" "D")) (((#t))))))

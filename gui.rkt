@@ -39,6 +39,8 @@
         "9C" 'resources/cards/cardClubs9.png
         "10C" 'resources/cards/cardClubs10.png
         "AC" 'resources/cards/cardClubsA.png
+        "1C" 'resources/cards/cardClubsA.png
+        "11C" 'resources/cards/cardClubsA.png
         "JC" 'resources/cards/cardClubsJ.png
         "QC" 'resources/cards/cardClubsQ.png
         "KC" 'resources/cards/cardClubsK.png
@@ -53,6 +55,8 @@
         "9D" 'resources/cards/cardDiamonds9.png
         "10D" 'resources/cards/cardDiamonds10.png
         "AD" 'resources/cards/cardDiamondsA.png
+        "1D" 'resources/cards/cardDiamondsA.png
+        "11D" 'resources/cards/cardDiamondsA.png
         "JD" 'resources/cards/cardDiamondsJ.png
         "QD" 'resources/cards/cardDiamondsQ.png
         "KD" 'resources/cards/cardDiamondsK.png
@@ -67,6 +71,8 @@
         "9H" 'resources/cards/cardHearts9.png
         "10H" 'resources/cards/cardHearts10.png
         "AH" 'resources/cards/cardHeartsA.png
+        "1H" 'resources/cards/cardHeartsA.png
+        "11H" 'resources/cards/cardHeartsA.png
         "JH" 'resources/cards/cardHeartsJ.png
         "QH" 'resources/cards/cardHeartsQ.png
         "KH" 'resources/cards/cardHeartsK.png
@@ -81,6 +87,8 @@
         "9S" 'resources/cards/cardSpades9.png
         "10S" 'resources/cards/cardSpades10.png
         "AS" 'resources/cards/cardSpadesA.png
+        "1S" 'resources/cards/cardSpadesA.png
+        "11S" 'resources/cards/cardSpadesA.png
         "JS" 'resources/cards/cardSpadesJ.png
         "QS" 'resources/cards/cardSpadesQ.png
         "KS" 'resources/cards/cardSpadesK.png
@@ -187,7 +195,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 (define (create-players-list lst)
   (cond ((null? lst) '() )
         ((equal? (car lst) "") (create-players-list (cdr lst)))
-        (else (cons (list (car lst) '() #t) (create-players-list (cdr lst))))))
+        (else (cons (list (car lst) '()) (create-players-list (cdr lst))))))
 
 #|Sets the name of the player who has the current turn in the turn-mssg label
 @param name : string|#
@@ -203,11 +211,19 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 (define (update-scores-mssg-aux players)
   (cond ((null? players) '())
         (else
-            (cond ((equal? (get-current-player players) "*croupier*")
+            (cond ((and (equal? (get-current-player players) "*croupier*") (equal? (get-current-player *players*) "*croupier*"))
                         (cond((> (string->number (get-player-score players)) 21) 
                               (append (list "\n\t" "Croupier" " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
                               (else (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players)))))
                         )
+                  ((and (equal? (get-current-player players) "*croupier*") (not(equal? (get-player-score players) "0")))
+                            (let* ([score-croupier (string->number (get-player-score players))]
+                                   [last-card (get-last-card-given players)]
+                                   [value-last-card (string->number (car last-card))])
+                                  (append (list "\n\t" "Croupier" " : " (~a (- score-croupier value-last-card))) (update-scores-mssg-aux (cdr players))))
+                          )
+                  ((equal? (get-current-player players) "*croupier*")
+                          (append (list "\n\t" "Croupier" " : " (get-player-score players)) (update-scores-mssg-aux (cdr players))))
                   (else
                       (cond ((> (string->number (get-player-score players)) 21) 
                                 (append (list "\n\t" (get-current-player players) " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
@@ -343,6 +359,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
         (let ([player (get-current-player *players*)])
               (let ([id (hash-ref *players-id* player)])
                     (draw-card id (get-last-card-given *players*) my-dc) ;draw first card in list
+                    (send parent-frame refresh)
                 )
           )
         (cond ((equal? (car (get-last-card-given *players*)) "A") ; checks if new card is an Ace
@@ -355,7 +372,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                         (next-player parent-frame my-dc)))
                     ))
         (update-scores-mssg)
-        (send parent-frame refresh))]))
+        )]))
 
 #|Creates button to stand. The player wont receive more cards.
 @param horiz-panel : horizontal-panel%
@@ -405,7 +422,6 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
             [card-png (~a (hash-ref cards-hash-table (get-card-code last-card)))])
                 (send my-dc draw-bitmap (read-bitmap card-png) (- *x-croupier* 20) *y-croupier*) ;draw card on top of the back-card image
                 (croupier-turn-aux id parent-frame my-dc)
-                (send parent-frame refresh)
           )
     )
 
@@ -413,13 +429,28 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
     (update-scores-mssg)
     (let ([score (get-player-score *players*)])
         (cond ((> (string->number score) 16) ;if croupier's score is higher than 16
-              #f) ;ends game
-              (else (set! *players* (cupier-play *players*))
+                #f);(send end-game-window show #t)) ;ends game
+              (else (set! *players* (card-request-croupier *players*))
                     (draw-card id (get-last-card-given *players*) my-dc)
-                    (croupier-turn-aux id parent-frame my-dc)
                     (send parent-frame refresh)
-                    (sleep 1)))) ;croupier asks for another card
+                    (sleep 1)
+                    (croupier-turn-aux id parent-frame my-dc) ;croupier asks for another card
+                    ))) 
     )
+
+(define end-game-window
+(new frame%
+       [label "Game Over"]
+       [style (list 'no-resize-border)]
+       [alignment (list 'center 'center)]
+       [stretchable-width #f]
+       [stretchable-height #f]))
+
+(define end-game-mssg
+(new message%
+      [label (string-join (list "Game over" "\n\nDo you want to play again?"))]
+      [parent end-game-window]
+      [vert-margin 10]))
 
 #|Button that sets Ace card to 11|#
 (define (button-11 horiz-panel parent-frame my-dc)
@@ -482,7 +513,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 #|Adds croupier to queue
 @param names : list|#
 (define (add-croupier names)
-  (append names (list(list "*croupier*" '() #t))))
+  (append names (list(list "*croupier*" '() ))))
 
 #|Returns the amount of players in the game
 @param players : list with players (including croupier)
