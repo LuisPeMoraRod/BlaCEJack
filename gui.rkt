@@ -156,7 +156,6 @@
   (new frame%
        [label "BlaCEJack"]
        [width 800]
-       ;[height 580]
        [style (list 'no-resize-border)]
        [alignment (list 'left 'center)]
        [stretchable-height #f]
@@ -429,14 +428,14 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
     (update-scores-mssg)
     (let ([score (get-player-score *players*)])
         (cond ((> (string->number score) 16) ;if croupier's score is higher than 16
-                #f);(send end-game-window show #t)) ;ends game
+                (build-end-game-wind)
+                (send end-game-window show #t)) ;ends game
               (else (set! *players* (card-request-croupier *players*))
                     (draw-card id (get-last-card-given *players*) my-dc)
                     (send parent-frame refresh)
                     (sleep 1)
                     (croupier-turn-aux id parent-frame my-dc) ;croupier asks for another card
-                    ))) 
-    )
+                    ))))
 
 (define end-game-window
 (new frame%
@@ -446,11 +445,49 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
        [stretchable-width #f]
        [stretchable-height #f]))
 
-(define end-game-mssg
+(define (set-final-score score-list)
+    (append (list "Final Scores : \n") (set-final-score-aux score-list 1))
+)
+
+(define (set-final-score-aux score-list index)
+    (cond ((null? score-list) '("\nDo you want to play again?") )
+          (else 
+              (let ([name (second (car score-list))]
+                    [score (~a (first (car score-list)))])
+                        (append (list (~a index) ") " name " : " score "\n") (set-final-score-aux (cdr score-list) (+ index 1)))))))
+
+(define (build-end-game-wind)
+  (end-game-mssg)
+  (let ([panel (create-horiz-panel end-game-window (list 'center 'center))])
+        (yes-bttn panel)
+        (no-bttn panel)
+  ))
+(define (end-game-mssg)
 (new message%
-      [label (string-join (list "Game over" "\n\nDo you want to play again?"))]
+      [label (string-join (set-final-score (get-rank *players*)))]
       [parent end-game-window]
       [vert-margin 10]))
+
+(define (yes-bttn parent-panel)
+(new button% [label "Yes"]
+          [parent parent-panel]
+          [horiz-margin 10]
+          [callback
+            (lambda (button event)
+                (send welcome-window show #t)
+                (send game-window show #f)
+                (send end-game-window show #f)
+                )]))
+
+(define (no-bttn parent-panel)
+(new button% [label "No"]
+          [parent parent-panel]
+          [horiz-margin 10]
+          [callback
+            (lambda (button event)
+              (send game-window show #f)
+              (send end-game-window show #f)
+                )]))
 
 #|Button that sets Ace card to 11|#
 (define (button-11 horiz-panel parent-frame my-dc)
