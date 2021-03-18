@@ -2,7 +2,13 @@
 
 (require racket/random)
 
-;export functions
+#|
+    This file contains the logic behind the BlaCEJack game
+    @author Monica Waterhouse
+|#
+
+;export functions to be used in gui.rkt
+
 (provide get-current-player
          update-players-queue
          card-request
@@ -171,7 +177,7 @@ return : the score of the current player as a string|#
 
 #|Checks if the score of the crupier is less than 16
 @param players-info-list : is the list that contains the information of all the players
-return : true if the score is less than 16 or false if it is equal or greater than 17|#
+@return : true if the score is less than 16 or false if it is equal or greater than 17|#
 (define (less-than-16? players-info-list)
     (cond
         ((> (string->number (get-player-score players-info-list)) 16) #f)
@@ -179,60 +185,98 @@ return : true if the score is less than 16 or false if it is equal or greater th
 
 #|Once all players stand, this function is called for the crupier to pick cards until the score is greater than 16
 @param players-info-list : is the list that contains the information of all the players
-return : the updated players-info-list with all the players on stand including the crupier|#
+@return : the updated players-info-list with all the players on stand including the crupier|#
 (define (cupier-play players-info-list)
     (cond 
         ((less-than-16? players-info-list) (cupier-play (card-request players-info-list)))
         (else players-info-list)))
 
+#|Count the number of cards the first player on the list has
+@param players-info-list : is the list that contains the information of all the players
+@return an integer with the number of cards the first player has|#
 (define (count-cards players-info-list)
     (length (get-first-player-cards players-info-list)))
 
+#|Creates a new list with the score information of a player
+@param players-info-list : is the list that contains the information of all the players
+@return : a list that contains: (score, name-of-the-player, amoubt-of-cards)|#
 (define (get-final-score-aux players-info-list)
     (list (string->number (get-player-score players-info-list)) (get-current-player players-info-list) (count-cards players-info-list)))
 
+#|Creates a list with the score information of all the players
+@param players-info-list : is the list that contains the information of all the players
+@return : a list with sublist that contain the score information of each player. Each sublist contains: (score, name-of-the-player, amoubt-of-cards)|#
 (define (get-final-score players-info-list)
     (cond 
         ((null? players-info-list) '())
         (else (cons (get-final-score-aux players-info-list) (get-final-score (cdr players-info-list))))))
 
+#|Deletes the last element of a list
+@param element-list : the list for which the last element will be deleted
+@return : the element-list without the last element|#
 (define (delete-final-element element-list)
     (cond
         ((= (length element-list) 1) '())
         (else (cons (car element-list) (delete-final-element (cdr element-list))))))
 
+#|Retrieves the last element of a list
+@param element-list : the list from which the last element will be retrieved
+@return : the last element of the element-list|#
 (define (get-final-element element-list)
     (cond
         ((= (length element-list) 1) (car element-list))
         (else (get-final-element (cdr element-list)))))
 
-(define (check-and-switch players-scores)
+#|This function puts the element that has the highest value at the end of the list by checking if the value of the score of the
+current player is minor to the one next to it, if it is, it moves to the next element without making a switch, and if it is not 
+it makes a switch and moves to the next element.
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards)
+@return : the players-score list with the subllist of the highest score at the end)|#
+(define (bubble-sort-aux players-scores)
     (cond
         ((= (length players-scores) 1) players-scores)
-        ((<= (caar players-scores) (caadr players-scores)) (cons (car players-scores) (check-and-switch (cdr players-scores))))
-        (else (cons (cadr players-scores) (check-and-switch (cons (car players-scores) (cddr players-scores)))))))
+        ((<= (caar players-scores) (caadr players-scores)) (cons (car players-scores) (bubble-sort-aux (cdr players-scores))))
+        (else (cons (cadr players-scores) (bubble-sort-aux (cons (car players-scores) (cddr players-scores)))))))
 
+#|This function sorts the players-score list starting from the highest value to the lowest value using the bubble sort algorithm
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards)
+@return : the players-scores list sorted from the highest to lowest score|#
 (define (bubble-sort-scores players-scores)
     (cond 
         ((null? players-scores) '())
         (else 
-            (cons (get-final-element (check-and-switch players-scores)) (bubble-sort-scores (delete-final-element (check-and-switch players-scores)))))))
+            (cons (get-final-element (bubble-sort-aux players-scores)) (bubble-sort-scores (delete-final-element (bubble-sort-aux players-scores)))))))
 
+#|Checks which scores are higher that 21 and add them to a list
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards)
+@return : a list with sublist of the players which scores are higher than 21|#
 (define (greater-than-21 players-scores)
     (cond
         ((null? players-scores) '())
         ((<= (caar players-scores) 21) '())
         (else (reverse (cons (car players-scores) (greater-than-21 (cdr players-scores)))))))
 
+#|Checks which scores are lower that 21 and add them to a list
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards)
+@return : a list with sublist of the players which scores are lower than 21|#
 (define (less-than-21 players-scores)
     (cond
         ((null? players-scores) '())
         ((>= (caar players-scores) 21) (less-than-21 (cdr players-scores))) 
         (else players-scores)))
 
+#|Gets the amount of cards that the current player player has
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards)
+return : an integer with the amount of cards a player has|#
 (define (get-card-count player-score)
     (caddr player-score))
 
+#|Creates a list with the scores that are equal to 21 and orders them depending on the amount of cards the player has,
+this means that if two or more players have a score of 21, the one that has less cards will be the first on the list
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards)
+@param reference : a list with sublists: (score, player-name, amount-of-cards), which first element will be the one that has less
+                   amount of cards.
+@return : a list of sublists with the players score information which scores are equal to 21 and sorted depending on the amount of cards|#
 (define (equal-to-21 players-scores reference)
     (cond
         ((null? players-scores) reference)
@@ -244,14 +288,22 @@ return : the updated players-info-list with all the players on stand including t
         ((> (caar players-scores) 21) (equal-to-21 (cdr players-scores) reference))
         (else reference)))
 
+#|With the sorted scores (from highest to lowest) this function creates the final game rank according to the game rules
+@param players-scores : this is a list that contains sublist wit the score info of each player: (score, player-name, amount-of-cards). This list must be sorted
+@return : a list with the final game ranking starting with the players whose score is equal to 21 and arrange by their card amounts, then
+          the players whose score is lower than 21 from highest to lowest and finally the ones that have a score greater than 21|#
 (define (get-rank-aux players-scores)
     (append (equal-to-21 players-scores '()) (less-than-21 players-scores) (greater-than-21 players-scores)))
 
+#|This function creates the final game rank according to the game rules
+@param players-info-list : is the list that contains the information of all the players
+@return : a list with the final game ranking starting with the players whose score is equal to 21 and arrange by their card amounts, then
+          the players whose score is lower than 21 from highest to lowest and finally the ones that have a score greater than 21|#
 (define (get-rank players-info-list)
     (get-rank-aux (bubble-sort-scores (get-final-score players-info-list))))
+
 ;-------------------------------------------------------------------------
 ;@author: Luis Pedro
-
 
 #|Get the name of the player with the current turn
 @param players : list with the names and list of cards of the players
