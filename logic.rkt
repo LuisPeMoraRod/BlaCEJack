@@ -80,7 +80,7 @@
 (define (compare-cards players-cards-list picked-card)
     (cond
         ((null? players-cards-list) #f)
-        ((and #t (member? picked-card (car players-cards-list))) #t)
+        ((member? picked-card (car players-cards-list)) #t)
         (else (compare-cards (cdr players-cards-list) picked-card))))
 
 #|Updates the first player info by adding a new card to its card's list
@@ -103,7 +103,7 @@
 @return : the updated players information list|#
 (define (give-card players-info-list picked-card)
     (cond
-        ((and #t (compare-cards (get-picked-cards players-info-list) picked-card)) (give-card players-info-list (pick-random-card)))
+        ((compare-cards (get-picked-cards players-info-list) picked-card) (give-card players-info-list (pick-random-card)))
         (else (give-card-aux players-info-list picked-card))))
 
 #|Function called when the player request a new card. If they don't have cards, they will receive 2 cards, otherwise they will be given one
@@ -220,11 +220,13 @@ return : the updated players-info-list with all the players on stand including t
 
 (define (greater-than-21 players-scores)
     (cond
+        ((null? players-scores) '())
         ((<= (caar players-scores) 21) '())
         (else (reverse (cons (car players-scores) (greater-than-21 (cdr players-scores)))))))
 
 (define (less-than-21 players-scores)
     (cond
+        ((null? players-scores) '())
         ((>= (caar players-scores) 21) (less-than-21 (cdr players-scores))) 
         (else players-scores)))
 
@@ -233,6 +235,7 @@ return : the updated players-info-list with all the players on stand including t
 
 (define (equal-to-21 players-scores reference)
     (cond
+        ((null? players-scores) reference)
         ((= (caar players-scores) 21) 
             (cond
                 ((null? reference) (equal-to-21 (cdr players-scores) (list (car players-scores))))
