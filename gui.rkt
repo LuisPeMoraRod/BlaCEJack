@@ -9,8 +9,8 @@
 (define *players* null) ;global variable that is going to register the cards owned by each player
 
  ;global variables for the position in screen of the cards of each player
-(define *x-croupier* 360)
-(define *y-croupier* 30)
+(define *x-croupier* null)
+(define *y-croupier* null)
 (define *x-pos0* null)
 (define *y-pos0* null)
 (define *x-pos1* null)
@@ -26,6 +26,11 @@
 
 (define *number-buttons* null)
 (define *playing-buttons* null)
+
+(define *game-window* null)
+(define *mssg-panel* null)
+(define *turn-mssg* null)
+(define *scores-mssg* null)
 
 ;hash table to link a code that represents every card to the path of that card's image (png)
 (define cards-hash-table
@@ -152,7 +157,7 @@
 ;************************* Main Game Window *************************
 
 #|Define main window that hosts the game dinamic|#
-(define game-window
+(define (game-window)
   (new frame%
        [label "BlaCEJack"]
        [width 800]
@@ -162,8 +167,8 @@
        ))
 
  #|Define horizontal panel to locate info labels|#      
-(define panel (new horizontal-pane%
-                   [parent game-window]
+(define (mssg-panel) (new horizontal-pane%
+                   [parent *game-window*]
                    [vert-margin 10]
                    [horiz-margin 10]
                    [alignment (list 'right 'center)]
@@ -171,18 +176,18 @@
                    [stretchable-height #t]))
 
 #|Define label that shows the player who has the current turn|#
-(define turn-mssg 
+(define (turn-mssg) 
 (new message%
-       [parent panel]
+       [parent *mssg-panel*]
        [label "Press 'Begin' button to start the game..."]
        [vert-margin 2]
        [horiz-margin 10]
        ))
 
 #|Define label that shows the player who has the current turn|#
-(define scores-mssg 
+(define (scores-mssg) 
 (new message%
-       [parent panel]
+       [parent *mssg-panel*]
        [label "Scores: \n\n\n\n"]
        [vert-margin 2]
        [horiz-margin 200]))
@@ -200,13 +205,13 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 @param name : string|#
 (define (set-turn-mssg name)
   (cond ((equal? name "*croupier*")
-              {send turn-mssg set-label "It's your turn: Croupier"})
-        (else {send turn-mssg set-label (string-join (list "It's your turn: " name))}))
+              {send *turn-mssg* set-label "It's your turn: Croupier"})
+        (else {send *turn-mssg* set-label (string-join (list "It's your turn: " name))}))
   )
 
 #|Update scores label|#
 (define (update-scores-mssg)
-  (send scores-mssg set-label (string-join (append (list "Scores:") (update-scores-mssg-aux *players*)))))
+  (send *scores-mssg* set-label (string-join (append (list "Scores:") (update-scores-mssg-aux *players*)))))
 (define (update-scores-mssg-aux players)
   (cond ((null? players) '())
         (else
@@ -296,6 +301,8 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 #|Sets the initial values of the global variables that contain the x coordinate of the position in screen of the cards images.
 @param amount-players : integer|#
 (define (set-positions amount-players)
+  (set! *x-croupier* 360)
+  (set! *y-croupier* 30)
   (cond ((equal? amount-players 1) (set! *x-pos0* 368) (set! *y-pos0* 337))
         ((equal? amount-players 2) (set! *x-pos0* 265) (set! *y-pos0* 335) (set! *x-pos1* 472) (set! *y-pos1* 335))
         ((equal? amount-players 3) (set! *x-pos0* 155) (set! *y-pos0* 310) (set! *x-pos1* 368) (set! *y-pos1* 337) (set! *x-pos2* 580) (set! *y-pos2* 310))))
@@ -420,6 +427,8 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
             [id (hash-ref *players-id* player)]
             [card-png (~a (hash-ref cards-hash-table (get-card-code last-card)))])
                 (send my-dc draw-bitmap (read-bitmap card-png) (- *x-croupier* 20) *y-croupier*) ;draw card on top of the back-card image
+                (send parent-frame refresh)
+                (sleep 1.5)
                 (croupier-turn-aux id parent-frame my-dc)
           )
     )
@@ -429,65 +438,13 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
     (let ([score (get-player-score *players*)])
         (cond ((> (string->number score) 16) ;if croupier's score is higher than 16
                 (build-end-game-wind)
-                (send end-game-window show #t)) ;ends game
+                (send *end-game-window* show #t)) ;ends game
               (else (set! *players* (card-request-croupier *players*))
                     (draw-card id (get-last-card-given *players*) my-dc)
                     (send parent-frame refresh)
-                    (sleep 1)
                     (croupier-turn-aux id parent-frame my-dc) ;croupier asks for another card
                     ))))
 
-(define end-game-window
-(new frame%
-       [label "Game Over"]
-       [style (list 'no-resize-border)]
-       [alignment (list 'center 'center)]
-       [stretchable-width #f]
-       [stretchable-height #f]))
-
-(define (set-final-score score-list)
-    (append (list "Final Scores : \n") (set-final-score-aux score-list 1))
-)
-
-(define (set-final-score-aux score-list index)
-    (cond ((null? score-list) '("\nDo you want to play again?") )
-          (else 
-              (let ([name (second (car score-list))]
-                    [score (~a (first (car score-list)))])
-                        (append (list (~a index) ") " name " : " score "\n") (set-final-score-aux (cdr score-list) (+ index 1)))))))
-
-(define (build-end-game-wind)
-  (end-game-mssg)
-  (let ([panel (create-horiz-panel end-game-window (list 'center 'center))])
-        (yes-bttn panel)
-        (no-bttn panel)
-  ))
-(define (end-game-mssg)
-(new message%
-      [label (string-join (set-final-score (get-rank *players*)))]
-      [parent end-game-window]
-      [vert-margin 10]))
-
-(define (yes-bttn parent-panel)
-(new button% [label "Yes"]
-          [parent parent-panel]
-          [horiz-margin 10]
-          [callback
-            (lambda (button event)
-                (send welcome-window show #t)
-                (send game-window show #f)
-                (send end-game-window show #f)
-                )]))
-
-(define (no-bttn parent-panel)
-(new button% [label "No"]
-          [parent parent-panel]
-          [horiz-margin 10]
-          [callback
-            (lambda (button event)
-              (send game-window show #f)
-              (send end-game-window show #f)
-                )]))
 
 #|Button that sets Ace card to 11|#
 (define (button-11 horiz-panel parent-frame my-dc)
@@ -559,33 +516,97 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
   (- (length players) 1)
 )
 
+
 #|Starts game by ...|#
 (define (start-game names)
+  (set! *game-window* (game-window))
+  (set! *mssg-panel* (mssg-panel))
+  (set! *turn-mssg* (turn-mssg))
+  (set! *scores-mssg* (scores-mssg))
+
   (send welcome-window show #f)
   (set! *players* (add-croupier names)) ;sets list with sublists of the names of each player and the croupier
   (update-scores-mssg)
   (let 
     ([blackjack-table (read-bitmap "resources/table.jpg")]
     [back-card (read-bitmap "resources/cards/cardBack_red4.png")])
-    (main-canvas game-window blackjack-table back-card)
+    (main-canvas *game-window* blackjack-table back-card)
     (let* 
-      ([horiz-panel (create-horiz-panel game-window (list 'center 'center))]
+      ([horiz-panel (create-horiz-panel *game-window* (list 'center 'center))]
         [horiz-panel1 (create-horiz-panel horiz-panel (list 'left 'center))]
         [horiz-panel2 (create-horiz-panel horiz-panel (list 'right 'center))])
       (let ([drawing-context (new bitmap-dc% [bitmap blackjack-table])])
         (let* ([ace-messg (ace-mssg horiz-panel1) ] ; setting buttons
-              [one-bttn (button-1 horiz-panel1 game-window drawing-context)]
-              [eleven-bttn (button-11 horiz-panel1 game-window drawing-context)]
-              [card-bttn (new-card-button horiz-panel2 game-window drawing-context (amount-players *players*))]
-              [stand-bttn (stand-button horiz-panel2 game-window drawing-context)])
+              [one-bttn (button-1 horiz-panel1 *game-window* drawing-context)]
+              [eleven-bttn (button-11 horiz-panel1 *game-window* drawing-context)]
+              [card-bttn (new-card-button horiz-panel2 *game-window* drawing-context (amount-players *players*))]
+              [stand-bttn (stand-button horiz-panel2 *game-window* drawing-context)])
               (set! *number-buttons* (list one-bttn eleven-bttn)) ;list of buttons for posterior enabling/disabling
               (set! *playing-buttons* (list card-bttn stand-bttn)) ;list of buttons for posterior enabling/disabling
-          (begin-button horiz-panel2 game-window drawing-context (amount-players *players*))
+          (begin-button horiz-panel2 *game-window* drawing-context (amount-players *players*))
           ) 
         )
       )
     )
-  (send game-window show #t)
+  (send *game-window* show #t)
   )
+
+;************************* End Game Window *************************
+
+(define *end-game-window* null)
+(define (end-game-window)
+(new frame%
+       [label "Game ended"]
+       [style (list 'no-resize-border)]
+       [alignment (list 'center 'center)]
+       [stretchable-width #f]
+       [stretchable-height #f]))
+
+(define (set-final-score score-list)
+    (append (list "Final Scores : \n") (set-final-score-aux score-list 1))
+)
+
+(define (set-final-score-aux score-list index)
+    (cond ((null? score-list) '("\nDo you want to play again?") )
+          (else 
+              (let ([name (second (car score-list))]
+                    [score (~a (first (car score-list)))])
+                        (append (list (~a index) ") " name " : " score "\n") (set-final-score-aux (cdr score-list) (+ index 1)))))))
+
+(define (build-end-game-wind)
+  (set! *end-game-window* (end-game-window))
+  (end-game-mssg)
+  (let ([panel (create-horiz-panel *end-game-window* (list 'center 'center))])
+        (yes-bttn panel)
+        (no-bttn panel)
+  ))
+(define (end-game-mssg)
+(new message%
+      [label (string-join (set-final-score (get-rank *players*)))]
+      [parent *end-game-window*]
+      [vert-margin 10]))
+
+(define (yes-bttn parent-panel)
+(new button% [label "Yes"]
+          [parent parent-panel]
+          [horiz-margin 10]
+          [callback
+            (lambda (button event)
+                (send welcome-window show #t)
+                (send *game-window* show #f)
+                (send *end-game-window* show #f)
+                )]))
+
+(define (no-bttn parent-panel)
+(new button% [label "No"]
+          [parent parent-panel]
+          [horiz-margin 10]
+          [callback
+            (lambda (button event)
+              (send *game-window* show #f)
+              (send *end-game-window* show #f)
+                )]))
+
+
 
 (send welcome-window show #t)
