@@ -308,7 +308,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                     (send i enable #t)))
               (else (for ([i *playing-buttons*])
                     (send i enable #t))))
-        (update-scores-mssg)
+        (update-scores-mssg) ;delete this line if error appears
         (send parent-frame refresh))]))
 
 #|Sets the initial values of the global variables that contain the x coordinate of the position in screen of the cards images.
@@ -605,6 +605,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
           [horiz-margin 10]
           [callback
             (lambda (button event)
+                (set! *players* null)
                 (send welcome-window show #t)
                 (send *game-window* show #f)
                 (send *end-game-window* show #f)
