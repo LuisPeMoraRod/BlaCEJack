@@ -153,8 +153,11 @@ assigned to an Ace card. The card should be 11 if the count won't be greater tha
 #|Fuction that allows to access the last card given to the first player of the list (current player)
 @param players-info-list : is the list that contains the information of all the players
 @return : the last card given to the current player |#
-(define (get-last-card-given players-info-list) 
-    (car (get-first-player-cards players-info-list)))
+(define (get-last-card-given players-info-list)
+    (cond((> (length (get-first-player-cards players-info-list)) 0)
+            (car (get-first-player-cards players-info-list)))
+        (else '()))
+    )
 
 #|This fuction calls the get-last-card-given and the get-card-code to return the card code of the last card given to the current player
 @param players-info-list : is the list that contains the information of all the players

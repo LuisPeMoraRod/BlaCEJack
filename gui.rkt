@@ -115,7 +115,7 @@
 (define mssg 
   (new message%
        [parent welcome-window]
-       [label "Insert the username of the player(s). If the amount of players\nis less than 3, leave the text input in blank."]
+       [label "Insert the username of the player(s). If the amount of players\nis less than 3, leave the text input in blank. \nEvery name must be different than the rest"]
        [vert-margin 10]
        [horiz-margin 10]))
 
@@ -150,10 +150,23 @@
        [vert-margin 10]
        [horiz-margin 10]
        [callback (lambda (button event)
+          (cond ((distinct? (send name-input-1 get-value) (send name-input-2 get-value) (send name-input-3 get-value))
             (start-game (create-players-list (list (send name-input-1 get-value) 
-            (send name-input-2 get-value) (send name-input-3 get-value)))))])); creates list of sublists with the name of each player
+            (send name-input-2 get-value) (send name-input-3 get-value)))))))])); creates list of sublists with the name of each player
 
-
+#|Checks if the 3 names are different
+@param name1 : string
+@param name2 : string
+@param name3 : string
+@return boolean|#
+(define (distinct? name1 name2 name3)
+  (cond ((and (or (equal? name1 name2) (equal? name1 name3)) (not (equal? name1 "")))
+              #f)
+        ((and (or (equal? name2 name1) (equal? name2 name3)) (not (equal? name2 "")))
+            #f)
+        ((and (or (equal? name3 name1) (equal? name3 name2)) (not (equal? name3 "")))
+            #f)
+        (else #t)))
 ;************************* Main Game Window *************************
 
 #|Define main window that hosts the game dinamic|#
@@ -220,7 +233,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                               (append (list "\n\t" "Croupier" " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
                               (else (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players)))))
                         )
-                  ((and (equal? (get-current-player players) "*croupier*") (not(equal? (get-player-score players) "0")))
+                  ((and (equal? (get-current-player players) "*croupier*") (not(null? (get-last-card-given players))))
                             (let* ([score-croupier (string->number (get-player-score players))]
                                    [last-card (get-last-card-given players)]
                                    [value-last-card (string->number (car last-card))])
@@ -289,13 +302,13 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
               (set! *players* (update-players-queue *players*))
               )
         (set-turn-mssg (get-current-player *players*))
-        (update-scores-mssg)
         (send button enable #f)
         (cond ((has-A? *players*) ; enable number buttons if player in turn has any Ace
               (for ([i *number-buttons*])
                     (send i enable #t)))
               (else (for ([i *playing-buttons*])
                     (send i enable #t))))
+        (update-scores-mssg)
         (send parent-frame refresh))]))
 
 #|Sets the initial values of the global variables that contain the x coordinate of the position in screen of the cards images.
@@ -526,7 +539,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 
   (send welcome-window show #f)
   (set! *players* (add-croupier names)) ;sets list with sublists of the names of each player and the croupier
-  (update-scores-mssg)
+  ;(update-scores-mssg)
   (let 
     ([blackjack-table (read-bitmap "resources/table.jpg")]
     [back-card (read-bitmap "resources/cards/cardBack_red4.png")])
