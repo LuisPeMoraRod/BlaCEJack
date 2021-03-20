@@ -279,6 +279,7 @@ return : the updated players-info-list with all the players on stand including t
 
 (define (get-rank players-info-list)
     (get-rank-aux (bubble-sort-scores (get-final-score players-info-list))))
+    
 ;-------------------------------------------------------------------------
 ;@author: Luis Pedro
 

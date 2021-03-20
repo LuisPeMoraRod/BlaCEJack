@@ -24,9 +24,11 @@
 ;list containing the position in screen for the next card to be added
 (define *cards-pos* null)
 
+;lists with buttons for posterior enabling/disabling methods
 (define *number-buttons* null)
 (define *playing-buttons* null)
 
+;elements of the main window
 (define *game-window* null)
 (define *mssg-panel* null)
 (define *turn-mssg* null)
@@ -152,7 +154,7 @@
        [callback (lambda (button event)
           (cond ((distinct? (send name-input-1 get-value) (send name-input-2 get-value) (send name-input-3 get-value))
             (start-game (create-players-list (list (send name-input-1 get-value) 
-            (send name-input-2 get-value) (send name-input-3 get-value)))))))])); creates list of sublists with the name of each player
+            (send name-input-2 get-value) (send name-input-3 get-value)))))))])) ; creates list of sublists with the name of each player
 
 #|Checks if the 3 names are different
 @param name1 : string
@@ -167,6 +169,7 @@
         ((and (or (equal? name3 name1) (equal? name3 name2)) (not (equal? name3 "")))
             #f)
         (else #t)))
+
 ;************************* Main Game Window *************************
 
 #|Define main window that hosts the game dinamic|#
@@ -228,19 +231,17 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 (define (update-scores-mssg-aux players)
   (cond ((null? players) '())
         (else
-            (cond ((and (equal? (get-current-player players) "*croupier*") (equal? (get-current-player *players*) "*croupier*"))
+            (cond ((and (equal? (get-current-player players) "*croupier*") (equal? (get-current-player *players*) "*croupier*")) ; if it is croupiers turn, set the score including the hidden card
                         (cond((> (string->number (get-player-score players)) 21) 
                               (append (list "\n\t" "Croupier" " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
                               (else (append (list "\n\t" "Croupier" " : " (get-player-score players )) (update-scores-mssg-aux (cdr players)))))
                         )
-                  ((and (equal? (get-current-player players) "*croupier*") (not(null? (get-last-card-given players))))
+                  ((and (equal? (get-current-player players) "*croupier*") (not(null? (get-last-card-given players)))) ;sets croupier score without the hidden card
                             (let* ([score-croupier (string->number (get-player-score players))]
                                    [last-card (get-last-card-given players)]
                                    [value-last-card (string->number (car last-card))])
                                   (append (list "\n\t" "Croupier" " : " (~a (- score-croupier value-last-card))) (update-scores-mssg-aux (cdr players))))
                           )
-                  ((equal? (get-current-player players) "*croupier*")
-                          (append (list "\n\t" "Croupier" " : " (get-player-score players)) (update-scores-mssg-aux (cdr players))))
                   (else
                       (cond ((> (string->number (get-player-score players)) 21) 
                                 (append (list "\n\t" (get-current-player players) " : " (get-player-score players ) " (BUSTED!)") (update-scores-mssg-aux (cdr players))))
@@ -308,7 +309,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                     (send i enable #t)))
               (else (for ([i *playing-buttons*])
                     (send i enable #t))))
-        (update-scores-mssg) ;delete this line if error appears
+        ;(update-scores-mssg) ;delete this line if error appears
         (send parent-frame refresh))]))
 
 #|Sets the initial values of the global variables that contain the x coordinate of the position in screen of the cards images.
@@ -330,6 +331,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 @param id : identifier for the player to know where to insert the image
 @param card : string key to search the path of the image in the hashmap
 @param my-dc : bitmap-dc%|#
+
 (define (draw-card id card my-dc)
   (let ([card-png (~a (hash-ref cards-hash-table (get-card-code card)))])
       (cond ((equal? id 0)
@@ -409,13 +411,17 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
         (next-player parent-frame my-dc)
         (send parent-frame refresh))]))
 
-#|Define info label |#
+#|Define info label 
+@param horiz-panel : horizontal-panel%
+|#
 (define (ace-mssg horiz-panel)
   (new message% [label "If you got an Ace, choose the value of the card:"]
           [parent horiz-panel]
           [horiz-margin 5]))
 
-#|Gives turn to next player. Checks if these new play has Aces to replace|#
+#|Gives turn to next player. Checks if these new play has Aces to replace
+@param parent-frame : frame%
+@param my-dc : bitmap-dc%|#
 (define (next-player parent-frame my-dc)
     (set! *players* (update-players-queue *players*))
     (set-turn-mssg (get-current-player *players*))
@@ -430,6 +436,9 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
               (send i enable #t)
               (send j enable #f)))))
 
+#|Routine that executes the decisions of the croupier 
+@param parent-frame : frame%
+@param my-dc : bitmap-dc%|#
 (define (croupier-turn parent-frame my-dc)
     (for ([i *number-buttons*]
           [j *playing-buttons*]) 
@@ -442,10 +451,13 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                 (send my-dc draw-bitmap (read-bitmap card-png) (- *x-croupier* 20) *y-croupier*) ;draw card on top of the back-card image
                 (send parent-frame refresh)
                 (sleep 1.5)
-                (croupier-turn-aux id parent-frame my-dc)
+                (croupier-turn-aux id parent-frame my-dc) ;croupier gets new cards until score is higher than 16
           )
     )
-
+#|Add cards to croupier until it has a score higher than 16
+@param id : integer (id of croupier)
+@param parent-frame : frame%
+@param my-dc : bitmap-dc%|#
 (define (croupier-turn-aux id parent-frame my-dc)
     (update-scores-mssg)
     (let ([score (get-player-score *players*)])
@@ -530,8 +542,10 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 )
 
 
-#|Starts game by ...|#
+#|Starts game by setting the global variables used for building the game window
+@param names : list of sublists with the name of the player and the list of cards for each player|#
 (define (start-game names)
+  ;sets elements of the window
   (set! *game-window* (game-window))
   (set! *mssg-panel* (mssg-panel))
   (set! *turn-mssg* (turn-mssg))
@@ -539,11 +553,10 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 
   (send welcome-window show #f)
   (set! *players* (add-croupier names)) ;sets list with sublists of the names of each player and the croupier
-  ;(update-scores-mssg)
   (let 
     ([blackjack-table (read-bitmap "resources/table.jpg")]
     [back-card (read-bitmap "resources/cards/cardBack_red4.png")])
-    (main-canvas *game-window* blackjack-table back-card)
+    (main-canvas *game-window* blackjack-table back-card) ;creates main canvas 
     (let* 
       ([horiz-panel (create-horiz-panel *game-window* (list 'center 'center))]
         [horiz-panel1 (create-horiz-panel horiz-panel (list 'left 'center))]
@@ -566,7 +579,9 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
 
 ;************************* End Game Window *************************
 
-(define *end-game-window* null)
+(define *end-game-window* null) ;variable that hosts the end game window
+
+#|Creates new frame|#
 (define (end-game-window)
 (new frame%
        [label "Game ended"]
@@ -575,10 +590,9 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
        [stretchable-width #f]
        [stretchable-height #f]))
 
+#|Creates string message with the final results to be put in the label of the end-game-mssg|#
 (define (set-final-score score-list)
-    (append (list "Final Scores : \n") (set-final-score-aux score-list 1))
-)
-
+    (append (list "Final Scores : \n") (set-final-score-aux score-list 1)))
 (define (set-final-score-aux score-list index)
     (cond ((null? score-list) '("\nDo you want to play again?") )
           (else 
@@ -586,6 +600,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                     [score (~a (first (car score-list)))])
                         (append (list (~a index) ") " name " : " score "\n") (set-final-score-aux (cdr score-list) (+ index 1)))))))
 
+#|Builds new window|#
 (define (build-end-game-wind)
   (set! *end-game-window* (end-game-window))
   (end-game-mssg)
@@ -593,12 +608,15 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
         (yes-bttn panel)
         (no-bttn panel)
   ))
+
+#|Label for final scores|#
 (define (end-game-mssg)
 (new message%
       [label (string-join (set-final-score (get-rank *players*)))]
       [parent *end-game-window*]
       [vert-margin 10]))
 
+#|Button to restart game|#
 (define (yes-bttn parent-panel)
 (new button% [label "Yes"]
           [parent parent-panel]
@@ -611,6 +629,7 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
                 (send *end-game-window* show #f)
                 )]))
 
+#|Button to end game |#
 (define (no-bttn parent-panel)
 (new button% [label "No"]
           [parent parent-panel]
@@ -621,6 +640,4 @@ that the player is still playing (hasn't ask to stand) i.e. (("Luis" () #t) ("Mo
               (send *end-game-window* show #f)
                 )]))
 
-
-
-(send welcome-window show #t)
+(send welcome-window show #t) ; starts game
